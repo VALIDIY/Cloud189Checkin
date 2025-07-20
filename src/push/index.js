@@ -4,6 +4,7 @@ const serverChan = require("./serverChan");
 const telegramBot = require("./telegramBot");
 const wecomBot = require("./wecomBot");
 const wxpush = require("./wxPusher");
+const qywxpush = require("./qywxPusher");
 const pushPlus = require("./pushPlus");
 const bark = require("./bark");
 const showDoc = require("./showDoc");
@@ -114,6 +115,32 @@ const pushWxPusher = (title, desp) => {
     });
 };
 
+const pushQYWxPusher = (title, desp) => {
+  if (!(qywxpush.appToken && qywxpush.uid)) {
+    return;
+  }
+  const data = {
+    appToken: qywxpush.appToken,
+    contentType: 1,
+    summary: title,
+    content: desp,
+    uids: [qywxpush.uid],
+  };
+  superagent
+    .post("https://qyapi.weixin.qq.com/cgi-bin/message")
+    .send(data)
+    .then((res) => {
+      if (res.body?.code === 1000) {
+        logger.info("qywxPusher推送成功");
+      } else {
+        logger.error(`qywxPusher推送失败:${JSON.stringify(res.body)}`);
+      }
+    })
+    .catch((err) => {
+      logger.error(`qywxPusher推送失败:${JSON.stringify(err)}`);
+    });
+};
+
 const pushPlusPusher = (title, desp) => {
   // 如果没有配置 pushPlus 的 token，则不执行推送
   if (!pushPlus.token) {
@@ -185,6 +212,7 @@ const push = (title, desp) => {
   pushTelegramBot(title, desp);
   pushWecomBot(title, desp);
   pushWxPusher(title, desp);
+  pushQYWxPusher(title, desp), // 企业微信应用消息推送
   pushPlusPusher(title, desp);
   pushBark(title, desp);
   pushShowDoc(title, desp);
