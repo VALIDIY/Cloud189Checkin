@@ -1,4 +1,3 @@
 module.exports = {
-  appToken:
-    process.env.QYWX_AM || "",
+  accesstoken:process.env.QYWX_AM || "",
 };
