@@ -14,7 +14,7 @@ jobs:
     environment: user
     steps:
       - name: 🔀 random delay 0-300 seconds
-        run: sleep $((RANDOM % 301))
+        run: sleep $((RANDOM % 101))
 
       - name: 🔌 Check out code
         uses: actions/checkout@main
