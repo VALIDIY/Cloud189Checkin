@@ -2,7 +2,6 @@ const { log4js } = require("../logger");
 const superagent = require("superagent");
 const serverChan = require("./serverChan");
 const telegramBot = require("./telegramBot");
-const wecomApp = require("./wecomApp");
 const wecomBot = require("./wecomBot");
 const wxpush = require("./wxPusher");
 const pushPlus = require("./pushPlus");
@@ -12,53 +11,62 @@ const showDoc = require("./showDoc");
 const logger = log4js.getLogger("push");
 logger.addContext("user", "push");
 
-// 获取access_token
-const getWecomToken = async () => {
-  const url = `https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${wecomApp.corpId}&corpsecret=${wecomApp.corpSecret}`;
-  try {
-    const res = await superagent.get(url);
-    if (res.body.errcode === 0) {
-      return res.body.access_token;
-    }
-    throw new Error(res.body.errmsg);
-  } catch (err) {
-    logger.error(`获取企业微信token失败: ${err.message}`);
-    return null;
-  }
-};
+('dotenv').config();
+const axios = require('axios');
+const FormData = require('form-data');
 
-// 推送文本消息
-const pushWecomApp = async (title, desp) => {
-  if (!(wecomApp.corpId && wecomApp.corpSecret && wecomApp.agentId)) {
-    return;
+class WeComNotifier {
+  constructor() {
+    this.tokenCache = {
+      accessToken: '',
+      expireTime: 0
+    };
   }
-  const token = await getWecomToken();
-  if (!token) return;
-  const data = {
-    touser: wecomApp.toUser,
-    msgtype: "text",
-    agentid: wecomApp.agentId,
-    text: {
-      content: `${title}\n\n${desp}`,
-    },
-    safe: 0
-  };
-  superagent
-    .post(
-      `https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`
-    )
-    .send(data)
-    .then((res) => {
-      if (res.body?.errcode) {
-        logger.error(`企业微信应用推送失败:${JSON.stringify(res.body)}`);
-      } else {
-        logger.info("企业微信应用推送成功");
-      }
-    })
-    .catch((err) => {
-      logger.error(`企业微信应用推送异常:${JSON.stringify(err)}`);
+
+  async _getToken() {
+    if (Date.now() < this.tokenCache.expireTime) {
+      return this.tokenCache.accessToken;
+    }
+    
+    const res = await axios.get(
+      `https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${process.env.WECOM_CORPID}&corpsecret=${process.env.WECOM_SECRET}`
+    );
+    
+    this.tokenCache = {
+      accessToken: res.data.access_token,
+      expireTime: Date.now() + (res.data.expires_in - 300) * 1000
+    };
+    return this.tokenCache.accessToken;
+  }
+
+  async send(payload) {
+    const token = await this._getToken();
+    return axios.post(
+      `https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`,
+      { ...payload, agentid: process.env.WECOM_AGENTID }
+    );
+  }
+
+  async sendText(content, users = process.env.NOTIFY_USERS) {
+    return this.send({
+      touser: users || '@all',
+      msgtype: 'text',
+      text: { content }
     });
-};
+  }
+
+  async uploadMedia(filePath, type = 'image') {
+    const form = new FormData();
+    form.append('media', fs.createReadStream(filePath));
+    return axios.post(
+      `https://qyapi.weixin.qq.com/cgi-bin/media/upload?access_token=${await this._getToken()}&type=${type}`,
+      form,
+      { headers: form.getHeaders() }
+    );
+  }
+  // 发送文本消息
+  await notifier.sendText('服务器告警：CPU使用率超过90%');
+}
 
 const pushServerChan = (title, desp) => {
   if (!serverChan.sendKey) {
@@ -230,7 +238,6 @@ const pushShowDoc = (title, desp) => {
 };
 
 const push = (title, desp) => {
-  pushWecomApp(title, desp);
   pushServerChan(title, desp);
   pushTelegramBot(title, desp);
   pushWecomBot(title, desp);
@@ -240,4 +247,5 @@ const push = (title, desp) => {
   pushShowDoc(title, desp);
 };
 
+module.exports = new WeComNotifier();
 module.exports = push;
