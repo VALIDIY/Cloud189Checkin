@@ -62,10 +62,9 @@ class WeComNotifier {
       `https://qyapi.weixin.qq.com/cgi-bin/media/upload?access_token=${await this._getToken()}&type=${type}`,
       form,
       { headers: form.getHeaders() }
+      .send(data)
     );
   }
-  // 发送文本消息
-  await notifier.sendText('服务器告警：CPU使用率超过90%');
 }
 
 const pushServerChan = (title, desp) => {
