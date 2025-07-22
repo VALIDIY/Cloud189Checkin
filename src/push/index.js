@@ -45,7 +45,7 @@ const pushWecomApp = async (title, desp) => {
   };
   superagent
     .post(
-    .post(`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`)
+      `https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`
     )
     .send(data)
     .then((res) => {
