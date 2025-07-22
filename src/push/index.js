@@ -11,6 +11,63 @@ const showDoc = require("./showDoc");
 const logger = log4js.getLogger("push");
 logger.addContext("user", "push");
 
+// 企业微信应用配置
+const wecomApp = {
+  corpId: process.env.WECOM_CORP_ID,      // 企业ID
+  corpSecret: process.env.WECOM_SECRET,   // 应用密钥
+  agentId: process.env.WECOM_AGENT_ID,    // 应用ID
+  toUser: process.env.WECOM_TO_USER || '@all' // 接收成员ID
+};
+
+// 获取access_token
+const getWecomToken = async () => {
+  const url = `https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${wecomApp.corpId}&corpsecret=${wecomApp.corpSecret}`;
+  try {
+    const res = await superagent.get(url);
+    if (res.body.errcode === 0) {
+      return res.body.access_token;
+    }
+    throw new Error(res.body.errmsg);
+  } catch (err) {
+    logger.error(`获取企业微信token失败: ${err.message}`);
+    return null;
+  }
+};
+
+// 推送文本消息
+const pushWecomApp = async (title, desp) => {
+  if (!(wecomApp.corpId && wecomApp.corpSecret && wecomApp.agentId)) {
+    return;
+  }
+
+  const token = await getWecomToken();
+  if (!token) return;
+
+  const data = {
+    touser: wecomApp.toUser,
+    msgtype: "text",
+    agentid: wecomApp.agentId,
+    text: {
+      content: `${title}\n\n${desp}`
+    },
+    safe: 0
+  };
+
+  try {
+    const res = await superagent
+      .post(`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`)
+      .send(data);
+
+    if (res.body.errcode === 0) {
+      logger.info("企业微信应用推送成功");
+    } else {
+      logger.error(`企业微信应用推送失败: ${res.body.errmsg}`);
+    }
+  } catch (err) {
+    logger.error(`企业微信应用推送异常: ${err.message}`);
+  }
+};
+
 const pushServerChan = (title, desp) => {
   if (!serverChan.sendKey) {
     return;
@@ -181,6 +238,7 @@ const pushShowDoc = (title, desp) => {
 };
 
 const push = (title, desp) => {
+  pushWecomApp(title, desp);
   pushServerChan(title, desp);
   pushTelegramBot(title, desp);
   pushWecomBot(title, desp);
