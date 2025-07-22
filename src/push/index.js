@@ -11,7 +11,6 @@ const showDoc = require("./showDoc");
 const logger = log4js.getLogger("push");
 logger.addContext("user", "push");
 
-('dotenv').config();
 const axios = require('axios');
 const FormData = require('form-data');
 
