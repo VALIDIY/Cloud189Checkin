@@ -2,6 +2,7 @@ const { log4js } = require("../logger");
 const superagent = require("superagent");
 const serverChan = require("./serverChan");
 const telegramBot = require("./telegramBot");
+const wecomApp = require("./wecomApp");
 const wecomBot = require("./wecomBot");
 const wxpush = require("./wxPusher");
 const pushPlus = require("./pushPlus");
@@ -10,14 +11,6 @@ const showDoc = require("./showDoc");
 
 const logger = log4js.getLogger("push");
 logger.addContext("user", "push");
-
-// 企业微信应用配置
-const wecomApp = {
-  corpId: process.env.WECOM_CORP_ID,      // 企业ID
-  corpSecret: process.env.WECOM_SECRET,   // 应用密钥
-  agentId: process.env.WECOM_AGENT_ID,    // 应用ID
-  toUser: process.env.WECOM_TO_USER || '@all' // 接收成员ID
-};
 
 // 获取access_token
 const getWecomToken = async () => {
@@ -39,33 +32,32 @@ const pushWecomApp = async (title, desp) => {
   if (!(wecomApp.corpId && wecomApp.corpSecret && wecomApp.agentId)) {
     return;
   }
-
   const token = await getWecomToken();
   if (!token) return;
-
   const data = {
     touser: wecomApp.toUser,
     msgtype: "text",
     agentid: wecomApp.agentId,
     text: {
-      content: `${title}\n\n${desp}`
+      content: `${title}\n\n${desp}`,
     },
     safe: 0
   };
-
-  try {
-    const res = await superagent
-      .post(`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`)
-      .send(data);
-
-    if (res.body.errcode === 0) {
-      logger.info("企业微信应用推送成功");
-    } else {
-      logger.error(`企业微信应用推送失败: ${res.body.errmsg}`);
-    }
-  } catch (err) {
-    logger.error(`企业微信应用推送异常: ${err.message}`);
-  }
+  superagent
+    .post(
+    .post(`https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`)
+    )
+    .send(data)
+    .then((res) => {
+      if (res.body?.errcode) {
+        logger.error(`企业微信应用推送失败:${JSON.stringify(res.body)}`);
+      } else {
+        logger.info("企业微信应用推送成功");
+      }
+    })
+    .catch((err) => {
+      logger.error(`企业微信应用推送异常:${JSON.stringify(err)}`);
+    });
 };
 
 const pushServerChan = (title, desp) => {
