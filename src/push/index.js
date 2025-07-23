@@ -11,7 +11,6 @@ const showDoc = require("./showDoc");
 const logger = log4js.getLogger("push");
 logger.addContext("user", "push");
 
-const axios = require('axios');
 const crypto = require('crypto');
 
 // 从环境变量获取配置（示例：WECOM_CONFIG="corpid,secret,agentid,touser"）
@@ -21,7 +20,7 @@ const [corpid, corpsecret, agentid, touser] = config;
 // 获取access_token
 async function getAccessToken() {
   const url = `https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${corpid}&corpsecret=${corpsecret}`;
-  const res = await axios.get(url);
+  const res = await superagent.get(url);
   return res.data.access_token;
 }
 
@@ -38,22 +37,7 @@ async function sendText(content) {
     safe: 0
   };
 
-  return axios.post(url, data);
-}
-
-// 发送Markdown消息
-async function sendMarkdown(content) {
-  const token = await getAccessToken();
-  const url = `https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`;
-  
-  const data = {
-    touser: touser || '@all',
-    msgtype: 'markdown',
-    agentid: parseInt(agentid),
-    markdown: { content }
-  };
-
-  return axios.post(url, data);
+  return superagent.post(url, data);
 }
 
 const pushServerChan = (title, desp) => {
@@ -235,4 +219,4 @@ const push = (title, desp) => {
   pushShowDoc(title, desp);
 };
 
-module.exports = { sendText, sendMarkdown, push };
+module.exports = { sendText, push };
