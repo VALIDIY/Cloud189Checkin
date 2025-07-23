@@ -11,35 +11,6 @@ const showDoc = require("./showDoc");
 const logger = log4js.getLogger("push");
 logger.addContext("user", "push");
 
-const crypto = require('crypto');
-
-// 从环境变量获取配置（示例：WECOM_CONFIG="corpid,secret,agentid,touser"）
-const config = process.env.WECOM_CONFIG?.split(',') || [];
-const [corpid, corpsecret, agentid, touser] = config;
-
-// 获取access_token
-async function getAccessToken() {
-  const url = `https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=${corpid}&corpsecret=${corpsecret}`;
-  const res = await superagent.get(url);
-  return res.data.access_token;
-}
-
-// 发送文本消息
-async function sendText(content) {
-  const token = await getAccessToken();
-  const url = `https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=${token}`;
-  
-  const data = {
-    touser: touser || '@all',
-    msgtype: 'text',
-    agentid: parseInt(agentid),
-    text: { content },
-    safe: 0
-  };
-
-  return superagent.post(url, data);
-}
-
 const pushServerChan = (title, desp) => {
   if (!serverChan.sendKey) {
     return;
@@ -219,4 +190,4 @@ const push = (title, desp) => {
   pushShowDoc(title, desp);
 };
 
-module.exports = sendText;
+module.exports = push;
