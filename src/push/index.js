@@ -219,4 +219,4 @@ const push = (title, desp) => {
   pushShowDoc(title, desp);
 };
 
-module.exports = { sendText, push };
+module.exports = sendText;
